@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Kimlik doğrulama kontrolü
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Kullanıcının kendi belgesine erişim kontrolü
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Admin kullanıcıları tanıma fonksiyonu
+    function isAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Users koleksiyonu kuralları
+    match /users/{userId} {
+      // Herkes kullanıcı sayısını kontrol edebilir (ilk kullanıcı kontrolü için)
+      allow list: if isAuthenticated();
+      
+      // Kullanıcılar kendi belgelerini okuyabilir
+      // Admin kullanıcılar tüm kullanıcıları okuyabilir
+      allow get: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      
+      // İlk kullanıcı admin olarak kaydolabilir
+      // NOT: Bu kural ilk kullanıcı için işlem yaptıktan sonra kaldırılmalıdır
+      allow create: if isAuthenticated() && isOwner(userId);
+      
+      // Admin kullanıcılar yeni onaylı kullanıcılar oluşturabilir (onay süreci için)
+      // Kullanıcılar kendi profillerini güncelleyebilir (rol değiştiremezler)
+      allow update: if isAuthenticated() && 
+                     (isAdmin() || 
+                      (isOwner(userId) && request.resource.data.role == resource.data.role));
+    }
+    
+    // Pending users koleksiyonu kuralları
+    match /pending_users/{userId} {
+      // Kullanıcılar kendi bekleyen belgelerini okuyabilir
+      allow get: if isAuthenticated() && isOwner(userId);
+      
+      // Admin kullanıcılar tüm bekleyen kullanıcıları listeleyebilir
+      allow list: if isAdmin();
+      
+      // Yeni kullanıcılar bekleyen kullanıcılar listesine eklenebilir
+      allow create: if isAuthenticated() && isOwner(userId);
+      
+      // Admin kullanıcılar bekleyen kullanıcıları güncelleyebilir veya silebilir
+      allow update, delete: if isAdmin();
+    }
+
+    // Rejected users koleksiyonu kuralları
+    match /rejected_users/{userId} {
+      // Kullanıcılar kendi red durumlarını okuyabilir
+      allow get: if isAuthenticated() && isOwner(userId);
+      
+      // Admin kullanıcılar tüm reddedilen kullanıcıları listeleyebilir
+      allow list: if isAdmin();
+      
+      // Sadece adminler kullanıcıları reddedebilir
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Mesajlar koleksiyonu kuralları
+    match /messages/{messageId} {
+      // Sadece onaylı kullanıcılar mesaj gönderebilir ve okuyabilir
+      allow read, write: if isAuthenticated() && 
+                           exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    // Diğer koleksiyonlar için varsayılan kural
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+} 

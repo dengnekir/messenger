@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "55596909847",
+    "project_id": "mesaj-70cc2",
+    "storage_bucket": "mesaj-70cc2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55596909847:android:263c4f2c1d1c7710be6352",
+        "android_client_info": {
+          "package_name": "com.example.messenger"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCR995TqJ0yp1PQ5pjPqBA8NuS0QgbJwKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
